@@ -13,7 +13,7 @@ var sprite;
 var weapon;
 var cursors;
 var fireButton;
-var bricks;
+var enemies;
 var firingTimer = 0;
 var livingEnemies = [];
 var enemyTimer = 0;
@@ -53,7 +53,7 @@ function create() {
     sprite = this.add.sprite(320, 500, 'ship');
 
     game.physics.arcade.enable(sprite);
-    //game.physics.arcade.enable(bricks);
+    //game.physics.arcade.enable(enemies);
     game.world.enableBody = true;
 
     //  Tell the Weapon to track the 'player' Sprite, offset by 14px horizontally, 0 vertically
@@ -63,38 +63,15 @@ function create() {
 
     fireButton = this.input.keyboard.addKey(Phaser.KeyCode.SPACEBAR);
 
-    //create group for the bricks
-    bricks = game.add.group();
-    bricks.enableBody = true
-    bricks.physicsBodyType = Phaser.Physics.ARCADE;
+    //create group for the enemies
+    enemies = game.add.group();
+    enemies.enableBody = true
+    enemies.physicsBodyType = Phaser.Physics.ARCADE;
 
-    //add 25 bricks to the group
-    // for (var i = 0; i < 5; i++){
-    //         for (var j = 0; j < 5; j++){
+    enemyTimer = game.time.events.loop(1500, addEnemy, this);
 
-
-    //             //create a brick at the correct position
-    //             var brick = game.add.sprite(55+i*60, 55+j*35, 'brick');
-
-            
-
-    //             game.physics.arcade.enable(brick);
-    //             brick.body.velocity.y = 100;
-
-    //             //make sure the brick won't move
-    //             brick.body.immovable = true;
-
-    //             //add bricks to the group
-    //             bricks.add(brick);
-    //         }
-    //     }
-
-
-
-        enemyTimer = game.time.events.loop(1500, addEnemy, this);
-
-        labelScore = game.add.text(20, 20, "0", 
-        { font: "30px Arial", fill: "#ffffff" });  
+    labelScore = game.add.text(20, 20, "0", 
+    { font: "30px Arial", fill: "#ffffff" });  
 
 
 }
@@ -123,7 +100,7 @@ function update() {
         }
 
     // Call the 'hit' function when the ball hits a brick
-    game.physics.arcade.collide(weapon.bullets, bricks, hit, null, this);
+    game.physics.arcade.collide(weapon.bullets, enemies, hit, null, this);
 
     game.physics.arcade.collide(enemyBullets, sprite, playerhit, null, this)
 
@@ -140,7 +117,8 @@ function hit(bullets, brick) {
 function playerhit(bullet, player){
     player.kill();
     bullet.kill();
-    //weapon.kill();
+    weapon.pauseAll();
+    game.time.pause();
 }
 
 function render() {
@@ -156,7 +134,7 @@ function enemyFires () {
 
     livingEnemies.length=0;
 
-    bricks.forEachAlive(function(brick){
+    enemies.forEachAlive(function(brick){
 
         // put every living enemy in an array
         livingEnemies.push(brick);
@@ -185,7 +163,7 @@ function addEnemy (){
     var randX = Math.floor(Math.random() * 700) + 100;
     console.log(randX);
     var enemy = game.add.sprite(randX, 1, 'brick');
-    bricks.add(enemy);
+    enemies.add(enemy);
 
     game.physics.enable(enemy);
     enemy.body.velocity.y = 200;
