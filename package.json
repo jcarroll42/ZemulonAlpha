@@ -1,5 +1,5 @@
 {
-  "name": "Zemulon Alpha",
+  "name": "zemulonalpha",
   "version": "1.0.0",
   "description": "Shoot-em-up game built with Phaser",
   "main": "server.js",
