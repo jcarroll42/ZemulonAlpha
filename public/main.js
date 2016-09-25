@@ -1,174 +1,183 @@
+var mainState = {
+    preload: function() {
 
-var game = new Phaser.Game(800, 600, Phaser.AUTO, '', { preload: preload, create: create, update: update, render: render, hit: hit });
+        game.load.image('bullet', 'assets/bullet.png');
+        game.load.image('ship', 'assets/shmup-ship.png');
+        game.load.image('brick', 'assets/brick.png');
 
-function preload() {
+    },
 
-    game.load.image('bullet', 'assets/bullet.png');
-    game.load.image('ship', 'assets/shmup-ship.png');
-    game.load.image('brick', 'assets/brick.png');
+    create: function() {
+        score = 0;
 
-}
+        this.firingTimer = 0;
+        this.livingEnemies = [];
+        this.enemyTimer = 0;
+        this.labelScore = 0;
 
-var sprite;
-var weapon;
-var cursors;
-var fireButton;
-var enemies;
-var firingTimer = 0;
-var livingEnemies = [];
-var enemyTimer = 0;
-var score = 0;
-var labelScore = 0;
-
-function create() {
-
-    // The enemy's bullets
-    enemyBullets = game.add.group();
-    enemyBullets.enableBody = true;
-    enemyBullets.physicsBodyType = Phaser.Physics.ARCADE;
-    enemyBullets.createMultiple(30, 'bullet');
-    enemyBullets.setAll('anchor.x', 0.5);
-    enemyBullets.setAll('anchor.y', 1);
-    enemyBullets.setAll('outOfBoundsKill', true);
-    enemyBullets.setAll('checkWorldBounds', true);
+        // the enemy's bullets
+        this.enemyBullets = game.add.group();
+        this.enemyBullets.enableBody = true;
+        this.enemyBullets.physicsBodyType = Phaser.Physics.ARCADE;
+        this.enemyBullets.createMultiple(30, 'bullet');
+        this.enemyBullets.setAll('anchor.x', 0.5);
+        this.enemyBullets.setAll('anchor.y', 1);
+        this.enemyBullets.setAll('outOfBoundsKill', true);
+        this.enemyBullets.setAll('checkWorldBounds', true);
 
 
-    //  Creates 30 bullets, using the 'bullet' graphic
-    weapon = game.add.weapon(30, 'bullet');
+        // create weapon with 30 bullets
+        this.weapon = game.add.weapon(30, 'bullet');
 
-    game.physics.startSystem(Phaser.Physics.ARCADE);
+        game.physics.startSystem(Phaser.Physics.ARCADE);
 
-    //  The bullet will be automatically killed when it leaves the world bounds
-    weapon.bulletKillType = Phaser.Weapon.KILL_WORLD_BOUNDS;
+        // destroy bullets when they leave world bounds
+        this.weapon.bulletKillType = Phaser.Weapon.KILL_WORLD_BOUNDS;
 
-    //  Because our bullet is drawn facing up, we need to offset its rotation:
-    weapon.bulletAngleOffset = 90;
+        //offset rotation for correct image placement
+        //this.weapon.bulletAngleOffset = 90;
 
-    //  The speed at which the bullet is fired
-    weapon.bulletSpeed = 400;
+        // set bullet speed
+        this.weapon.bulletSpeed = 400;
 
-    //  Speed-up the rate of fire, allowing them to shoot 1 bullet every 60ms
-    weapon.fireRate = 60;
+        //  set fire rate: 1 bullet every 60ms
+        this.weapon.fireRate = 60;
 
-    sprite = this.add.sprite(320, 500, 'ship');
+        // add the actual player
+        this.player = this.add.sprite(320, 500, 'ship');
 
-    game.physics.arcade.enable(sprite);
-    //game.physics.arcade.enable(enemies);
-    game.world.enableBody = true;
+        game.physics.arcade.enable(this.player);
 
-    //  Tell the Weapon to track the 'player' Sprite, offset by 14px horizontally, 0 vertically
-    weapon.trackSprite(sprite, 26, 0);
+        game.world.enableBody = true;
 
-    cursors = this.input.keyboard.createCursorKeys();
+        // tie weapon to player
+        this.weapon.trackSprite(this.player, 26, 0);
 
-    fireButton = this.input.keyboard.addKey(Phaser.KeyCode.SPACEBAR);
+        // create input keys
+        this.cursors = this.input.keyboard.createCursorKeys();
 
-    //create group for the enemies
-    enemies = game.add.group();
-    enemies.enableBody = true
-    enemies.physicsBodyType = Phaser.Physics.ARCADE;
+        // set fire button to spacebar
+        this.fireButton = this.input.keyboard.addKey(Phaser.KeyCode.SPACEBAR);
 
-    enemyTimer = game.time.events.loop(1500, addEnemy, this);
+        //create group for the enemies
+        this.enemies = game.add.group();
+        this.enemies.enableBody = true
+        this.enemies.physicsBodyType = Phaser.Physics.ARCADE;
 
-    labelScore = game.add.text(20, 20, "0", 
-    { font: "30px Arial", fill: "#ffffff" });  
+        // loop to add a new enemy every 1.5 seconds
+        this.enemyTimer = game.time.events.loop(1500, this.addEnemy, this);
+
+        // set the scoreboard
+        this.labelScore = game.add.text(20, 20, "0", 
+        { font: "30px Arial", fill: "#ffffff" });  
 
 
-}
+    },
 
-function update() {
+    update: function() {
 
-    sprite.body.velocity.x = 0;
+        this.player.body.velocity.x = 0;
 
-    if (cursors.left.isDown)
-    {
-        sprite.body.velocity.x = -200;
-    }
-    else if (cursors.right.isDown)
-    {
-        sprite.body.velocity.x = 200;
-    }
-
-    if (fireButton.isDown)
-    {
-        weapon.fire();
-    }
-
-    if (game.time.now > firingTimer)
+        if (this.cursors.left.isDown)
         {
-            enemyFires();
+            this.player.body.velocity.x = -200;
+        }
+        else if (this.cursors.right.isDown)
+        {
+            this.player.body.velocity.x = 200;
         }
 
-    // Call the 'hit' function when the ball hits a brick
-    game.physics.arcade.collide(weapon.bullets, enemies, hit, null, this);
+        if (this.fireButton.isDown)
+        {
+            this.weapon.fire();
+        }
 
-    game.physics.arcade.collide(enemyBullets, sprite, playerhit, null, this)
+        if (game.time.now > this.firingTimer)
+            {
+                this.enemyFires();
+            }
 
-}
+        // call the 'hit' function when a bullet hits an enemy
+        game.physics.arcade.collide(this.weapon.bullets, this.enemies, this.hit, null, this);
 
-function hit(bullets, brick) {  
-    brick.kill();
-    bullets.kill();
+        //call playerHit when an enemy bullet hits the player
+        game.physics.arcade.collide(this.enemyBullets, this.player, this.playerHit, null, this);
+        game.physics.arcade.collide(this.enemies, this.player, this.playerHit, null, this);
 
-    score += 1;
-    labelScore.text = score;
-}
+    },
+    // function that handles enemy destruction when player shoots them
+    hit: function(bullets, enemy) {  
+        enemy.kill();
+        bullets.kill();
 
-function playerhit(bullet, player){
-    player.kill();
-    bullet.kill();
-    weapon.pauseAll();
-    game.time.pause();
-}
+        score += 1;
+        this.labelScore.text = score;
+    },
+    //function that handles when the player hits either an enemy or an enemy bullet
+    playerHit: function(object, player){
+        player.kill();
+        object.kill();
+        //this.weapon.bullets.killAll();
+        //this.enemies.kill();
+        this.weapon.pauseAll();
+        game.state.start('gameOver');
+    },
 
-function render() {
+    render: function() {
 
-    //weapon.debug();
+        //weapon.debug();
 
-}
+    },
 
-function enemyFires () {
+    // function that handles how the enemies shoot
+    enemyFires: function() {
 
-    //  Grab the first bullet we can from the pool
-    enemyBullet = enemyBullets.getFirstExists(false);
+        var that = this;
+        //  get a bullet from enemy bullet pool
+        var enemyBullet = this.enemyBullets.getFirstExists(false);
 
-    livingEnemies.length=0;
+        this.livingEnemies.length = 0;
 
-    enemies.forEachAlive(function(brick){
+        this.enemies.forEachAlive(function(enemy){
 
-        // put every living enemy in an array
-        livingEnemies.push(brick);
-    });
+            // put all the enemies in an array
+            that.livingEnemies.push(enemy);
+        });
 
 
-    if (enemyBullet && livingEnemies.length > 0)
-    {
-         
-        var random=game.rnd.integerInRange(0,livingEnemies.length-1);
+        if (enemyBullet && this.livingEnemies.length > 0) {
+             
+            var random = game.rnd.integerInRange(0, this.livingEnemies.length - 1);
 
-        // randomly select one of them
-        var shooter=livingEnemies[random];
-        // And fire the bullet from this enemy
-        enemyBullet.reset(shooter.body.x + 20, shooter.body.y + 10);
+            // randomly select an enemy
+            var shooter = this.livingEnemies[random];
+            // fire bullet from selected enemy
+            enemyBullet.reset(shooter.body.x + 20, shooter.body.y + 10);
 
-        //game.physics.arcade.moveToObject(enemyBullet,sprite,120);
+            //game.physics.arcade.moveToObject(enemyBullet,sprite,120);
 
-        enemyBullet.body.velocity.y = 400;
-        firingTimer = game.time.now + 500;
+            enemyBullet.body.velocity.y = 400;
+            this.firingTimer = game.time.now + 500;
+        }
+
+    },
+    // function that handles when an enemy gets added
+    addEnemy: function(){
+        var randX = Math.floor(Math.random() * 600) + 100;
+        console.log(randX);
+        var enemy = game.add.sprite(randX, 1, 'brick');
+        this.enemies.add(enemy);
+
+        game.physics.enable(enemy); 
+        enemy.body.velocity.y = 200;
+
+        enemy.checkWorldBounds = true;
+        enemy.outOfBoundsKill = true;
+
     }
-
 }
 
-function addEnemy (){
-    var randX = Math.floor(Math.random() * 700) + 100;
-    console.log(randX);
-    var enemy = game.add.sprite(randX, 1, 'brick');
-    enemies.add(enemy);
+// var game = new Phaser.Game(800, 600);
 
-    game.physics.enable(enemy);
-    enemy.body.velocity.y = 200;
 
-    enemy.checkWorldBounds = true;
-    enemy.outOfBoundsKill = true;
-
-}
+// game.state.start('main');
