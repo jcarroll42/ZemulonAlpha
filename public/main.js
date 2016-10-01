@@ -8,7 +8,8 @@ var mainState = {
         game.load.image('striker', 'assets/striker.png');
         game.load.image('sweeper', 'assets/sweeper.png');
         game.load.image('laserPow', 'assets/laserPowerUp.png');
-        game.load.image('triplePow', 'assets/triplePowerUp.png')
+        game.load.image('triplePow', 'assets/triplePowerUp.png');
+        game.load.image('spread', 'assets/spreadBullet.png');
 
     },  
 
@@ -93,7 +94,7 @@ var mainState = {
         this.sweeperTimer = game.time.events.loop(8000, this.addSweeper, this);
 
         // loop to add powerups
-        this.powTimer = game.time.events.loop(2000, this.addLaserPowerUp, this, this.powerUpTypes[Math.floor(Math.random() * this.powerUpTypes.length)]);
+        this.powTimer = game.time.events.loop(2000, this.addPowerUp, this);
 
         // set the scoreboard
         this.labelScore = game.add.text(20, 20, "0", 
@@ -162,11 +163,26 @@ var mainState = {
     },
 
     weaponPowerUp: function(player, powerUp){
-        console.log(powerUp);
-        powerUp.kill();
-        this.weapon.bulletKey = 'laser';
-        this.weapon.bulletSpeed = 1000;
-        this.weapon.fireRate = 1;
+        console.log(powerUp.key);
+
+        switch (powerUp.key){
+            case 'laserPow':
+                powerUp.kill();
+                this.weapon.bulletKey = 'laser';
+                this.weapon.bulletSpeed = 1000;
+                this.weapon.fireRate = 1;
+                break;
+            case 'triplePow':
+                powerUp.kill();
+                this.weapon.bulletKey = 'spread';
+                this.weapon.bulletAngleVariance = 20;
+                this.weapon.fireRate = 50;
+                break;
+            default:
+                console.log(powerUp.key);
+
+        }
+        
         game.time.events.add(10000, mainState.resetWep, mainState);
     },
 
@@ -181,6 +197,7 @@ var mainState = {
         this.weapon.bulletKey = 'bullet';
         this.weapon.bulletSpeed = 400;
         this.weapon.fireRate = 100;
+        this.weapon.bulletAngleVariance = 0;
     },
 
     // function that handles how the enemies shoot
@@ -255,10 +272,11 @@ var mainState = {
         sweep.start();
     },
 
-    addLaserPowerUp: function(){
-        var laserPowerUp = this.addObject('laserPow');
-        this.powerUps.add(laserPowerUp);
-        laserPowerUp.body.velocity.y = 100;
+    addPowerUp: function(){
+        var powerUpType = this.powerUpTypes[Math.floor(Math.random() * this.powerUpTypes.length)];
+        var powerUp = this.addObject(powerUpType);
+        this.powerUps.add(powerUp);
+        powerUp.body.velocity.y = 100;
 
     },
 
