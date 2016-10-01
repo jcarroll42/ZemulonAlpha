@@ -2,18 +2,28 @@ var mainState = {
     preload: function() {
 
         game.load.image('bullet', 'assets/bullet.png');
+        game.load.image('laser', 'assets/laserblue3.png');
         game.load.image('ship', 'assets/shmup-ship.png');
         game.load.image('brick', 'assets/brick.png');
+        game.load.image('striker', 'assets/striker.png');
+        game.load.image('sweeper', 'assets/sweeper.png');
+        game.load.image('laserPow', 'assets/laserPowerUp.png');
+        game.load.image('triplePow', 'assets/triplePowerUp.png')
 
-    },
+    },  
 
     create: function() {
         score = 0;
+        this.powerUpTypes = ['laserPow', 'triplePow'];
 
         this.firingTimer = 0;
         this.livingEnemies = [];
         this.enemyTimer = 0;
         this.labelScore = 0;
+
+        // start the game physics engine
+        game.physics.startSystem(Phaser.Physics.ARCADE);
+        game.world.enableBody = true;
 
         // the enemy's bullets
         this.enemyBullets = game.add.group();
@@ -25,30 +35,24 @@ var mainState = {
         this.enemyBullets.setAll('outOfBoundsKill', true);
         this.enemyBullets.setAll('checkWorldBounds', true);
 
-
         // create weapon with 30 bullets
-        this.weapon = game.add.weapon(30, 'bullet');
-
-        game.physics.startSystem(Phaser.Physics.ARCADE);
+        this.weapon = game.add.weapon(-1, 'bullet');
+        
 
         // destroy bullets when they leave world bounds
         this.weapon.bulletKillType = Phaser.Weapon.KILL_WORLD_BOUNDS;
-
-        //offset rotation for correct image placement
-        //this.weapon.bulletAngleOffset = 90;
 
         // set bullet speed
         this.weapon.bulletSpeed = 400;
 
         //  set fire rate: 1 bullet every 60ms
-        this.weapon.fireRate = 60;
+        this.weapon.fireRate = 100;
 
         // add the actual player
         this.player = this.add.sprite(320, 500, 'ship');
 
+        // enable physics on player sprite
         game.physics.arcade.enable(this.player);
-
-        game.world.enableBody = true;
 
         // tie weapon to player
         this.weapon.trackSprite(this.player, 26, 0);
@@ -64,8 +68,32 @@ var mainState = {
         this.enemies.enableBody = true
         this.enemies.physicsBodyType = Phaser.Physics.ARCADE;
 
+        // create striker enemy group
+        this.strikers = game.add.group();
+        this.strikers.enableBody = true;
+        this.strikers.physicsBodyType = Phaser.Physics.ARCADE;
+
+        // create sweeper enemy group
+        this.sweepers = game.add.group();
+        this.sweepers.enableBody = true;
+        this.sweepers.physicsBodyType = Phaser.Physics.ARCADE;
+
+        // create powerUps
+        this.powerUps = game.add.group();
+        this.powerUps.enableBody = true;
+        this.powerUps.physicsBodyType = Phaser.Physics.ARCADE;
+
         // loop to add a new enemy every 1.5 seconds
         this.enemyTimer = game.time.events.loop(1500, this.addEnemy, this);
+
+        // loop to add strikers
+        this.strikerTimer = game.time.events.loop(3000, this.addStriker, this);
+
+        // loop to add strikers
+        this.sweeperTimer = game.time.events.loop(8000, this.addSweeper, this);
+
+        // loop to add powerups
+        this.powTimer = game.time.events.loop(2000, this.addLaserPowerUp, this, this.powerUpTypes[Math.floor(Math.random() * this.powerUpTypes.length)]);
 
         // set the scoreboard
         this.labelScore = game.add.text(20, 20, "0", 
@@ -77,39 +105,51 @@ var mainState = {
     update: function() {
 
         this.player.body.velocity.x = 0;
+        this.player.body.velocity.y = 0;
 
-        if (this.cursors.left.isDown)
-        {
+        //handles all movements
+        if (this.cursors.left.isDown){
             this.player.body.velocity.x = -200;
         }
-        else if (this.cursors.right.isDown)
-        {
+        else if (this.cursors.right.isDown){
             this.player.body.velocity.x = 200;
         }
 
-        if (this.fireButton.isDown)
-        {
+        if (this.cursors.up.isDown){
+            this.player.body.velocity.y = -200;
+        }
+        else if (this.cursors.down.isDown){
+            this.player.body.velocity.y = 200;
+        }
+
+        //fire weapon
+        if (this.fireButton.isDown){
             this.weapon.fire();
         }
 
-        if (game.time.now > this.firingTimer)
-            {
-                this.enemyFires();
-            }
+        if (game.time.now > this.firingTimer){
+            this.enemyFires();
+        }
 
         // call the 'hit' function when a bullet hits an enemy
         game.physics.arcade.collide(this.weapon.bullets, this.enemies, this.hit, null, this);
+        game.physics.arcade.collide(this.weapon.bullets, this.strikers, this.hit, null, this);
+        game.physics.arcade.collide(this.weapon.bullets, this.sweepers, this.hit, null, this);
 
-        //call playerHit when an enemy bullet hits the player
+        // call playerHit when an enemy bullet hits the player
         game.physics.arcade.collide(this.enemyBullets, this.player, this.playerHit, null, this);
         game.physics.arcade.collide(this.enemies, this.player, this.playerHit, null, this);
+        game.physics.arcade.collide(this.strikers, this.player, this.playerHit, null, this);
+        game.physics.arcade.collide(this.sweepers, this.player, this.playerHit, null, this);
+
+        // call powerUpHit when powerup happens
+        game.physics.arcade.collide(this.powerUps, this.player, this.weaponPowerUp, null, this);
 
     },
     // function that handles enemy destruction when player shoots them
     hit: function(bullets, enemy) {  
         enemy.kill();
         bullets.kill();
-
         score += 1;
         this.labelScore.text = score;
     },
@@ -117,16 +157,30 @@ var mainState = {
     playerHit: function(object, player){
         player.kill();
         object.kill();
-        //this.weapon.bullets.killAll();
-        //this.enemies.kill();
         this.weapon.pauseAll();
         game.state.start('gameOver');
+    },
+
+    weaponPowerUp: function(player, powerUp){
+        console.log(powerUp);
+        powerUp.kill();
+        this.weapon.bulletKey = 'laser';
+        this.weapon.bulletSpeed = 1000;
+        this.weapon.fireRate = 1;
+        game.time.events.add(10000, mainState.resetWep, mainState);
     },
 
     render: function() {
 
         //weapon.debug();
 
+    },
+
+    resetWep: function(){
+        //console.log('hi');
+        this.weapon.bulletKey = 'bullet';
+        this.weapon.bulletSpeed = 400;
+        this.weapon.fireRate = 100;
     },
 
     // function that handles how the enemies shoot
@@ -154,30 +208,68 @@ var mainState = {
             // fire bullet from selected enemy
             enemyBullet.reset(shooter.body.x + 20, shooter.body.y + 10);
 
-            //game.physics.arcade.moveToObject(enemyBullet,sprite,120);
-
             enemyBullet.body.velocity.y = 400;
-            this.firingTimer = game.time.now + 500;
+            this.firingTimer = game.time.now + 400;
         }
 
     },
+
     // function that handles when an enemy gets added
     addEnemy: function(){
-        var randX = Math.floor(Math.random() * 600) + 100;
-        console.log(randX);
-        var enemy = game.add.sprite(randX, 1, 'brick');
+        var enemy = this.addObject('brick');
         this.enemies.add(enemy);
-
-        game.physics.enable(enemy); 
         enemy.body.velocity.y = 200;
+    },
 
-        enemy.checkWorldBounds = true;
-        enemy.outOfBoundsKill = true;
+    // function that handles when a striker enemy gets added
+    // fast-moving enemy that 
+    addStriker: function(){
+        var striker = this.addObject('striker');
+        this.strikers.add(striker);
+        striker.anchor.setTo(0.5, 0.5);
+        striker.rotation = game.physics.arcade.angleToXY(striker, this.player.x, this.player.y);
+        game.physics.arcade.moveToObject(striker, this.player, 500);
+    },
 
+    // function that handles when a sweeper enemy gets added
+    // sweeps across the screen and fires
+    addSweeper: function(){
+        var sweeper;
+        var sweep;
+        var horizTo;
+
+        sweeper = this.addObject('sweeper');
+        this.sweepers.add(sweeper);
+        this.enemies.add(sweeper);
+        sweep = game.add.tween(sweeper);
+
+
+        if (sweeper.x > 400){
+           horizTo = 100;
+        }
+        else{
+            horizTo = 700;
+        }
+
+        sweep.to({ y: [150, 900], x: [horizTo]}, 4000, 'Linear');
+        sweep.start();
+    },
+
+    addLaserPowerUp: function(){
+        var laserPowerUp = this.addObject('laserPow');
+        this.powerUps.add(laserPowerUp);
+        laserPowerUp.body.velocity.y = 100;
+
+    },
+
+    addObject: function(objectType){
+        var randX = Math.floor(Math.random() * 600) + 100;
+        var gameObj = game.add.sprite(randX, 1, objectType);
+        
+        game.physics.enable(gameObj);
+        gameObj.checkWorldBounds = true;
+        gameObj.outOfBoundsKill = true;
+
+        return gameObj;
     }
 }
-
-// var game = new Phaser.Game(800, 600);
-
-
-// game.state.start('main');

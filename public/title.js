@@ -22,48 +22,69 @@ var titleScreen = {
 
         //  Load the Google WebFont Loader script
         game.load.script('webfont', '//ajax.googleapis.com/ajax/libs/webfont/1.4.7/webfont.js');
+        //this.introText = game.add.text(game.world.centerX, game.world.centerY, "");
+        
 
     },
 
     text: null,
     grd: null,
+    introText: null,
+    introContent: ["It's the future.", "You can tell because of the way that it is.", "Also because you're in a ship.", "A SPACE ship.", "And that ship is called...", "Zemulon Alpha"],
+    printCount: 1,
+    
 
     create: function() {
 
         game.stage.setBackgroundColor(0x000000);
         this.startButton = this.input.keyboard.addKey(Phaser.KeyCode.SPACEBAR);
+        
+
+    },
+
+    mainText: function(){
+        var mainTween = game.add.tween(titleScreen.text).to({alpha: 1}, 2000, "Linear");
+        mainTween.start;
 
     },
 
     createText: function() {
 
-        this.text = game.add.text(game.world.centerX, game.world.centerY, "Zemulon Alpha");
-        this.text.anchor.setTo(0.5);
+        titleScreen.text = game.add.text(game.world.centerX, game.world.centerY, "Zemulon Alpha");
+        titleScreen.introText = game.add.text(23, 250, "");
+        titleScreen.text.anchor.setTo(0.5);
+        titleScreen.introText.text = titleScreen.introContent[0];
+
+        
+
+        // if (this.printCount < 5){
+        //     game.time.events.loop(3000, titleScreen.printLoop, this);
+        // }
 
 
-        this.text.font = 'Bungee Hairline';
-        this.text.fontSize = 60;
-        this.text.fill = "#FFFFFF";
-        this.text.alpha = 0;
+        titleScreen.text.font = 'Bungee Hairline';
+        titleScreen.text.fontSize = 60;
+        titleScreen.text.fill = "#FFFFFF";
+        titleScreen.text.alpha = 0;
+        titleScreen.text.align = 'center';
+        titleScreen.text.strokeThickness = 2;
 
-        var tween = game.add.tween(this.text).to({alpha: 1}, 2000, "Linear", true);
+        titleScreen.introText.font = 'Bungee Hairline';
+        titleScreen.introText.fontSize = 30;
+        titleScreen.introText.fill = "#FFFFFF";
+        titleScreen.introText.alpha = 0;
+        titleScreen.introText.align = 'center';
 
-        //  x0, y0 - x1, y1
-        // this.grd = this.text.context.createLinearGradient(0, 0, 0, this.text.canvas.height);
-        // this.grd.addColorStop(0, '#8ED6FF');   
-        // this.grd.addColorStop(1, '#004CB3');
-        // this.text.fill = this.grd;
+        var alphaIn = game.add.tween(titleScreen.introText).to( { alpha: 1 }, 1000, "Linear", true, 0, 5);
+        alphaIn.yoyo(true, 1000);
 
-        this.text.align = 'center';
-        //this.text.stroke = '#000000';
-        this.text.strokeThickness = 2;
-        //this.text.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
+        //var mainTween = game.add.tween(this.text).to({alpha: 1}, 2000, "Linear");
+        alphaIn.onComplete.add(titleScreen.mainText, this);
 
-        this.text.inputEnabled = true;
-        this.text.input.enableDrag();
+        //mainTween.start();
 
-        //this.text.events.onInputOver.add(this.over, this);
-        //this.text.events.onInputOut.add(this.out, this);
+
+        
 
     },
 
@@ -71,19 +92,32 @@ var titleScreen = {
         if (this.startButton.isDown){
             game.state.start('main');
         }
-    },
+        if (game.time.now > 4000){
+            if (titleScreen.introText.alpha === 0 && titleScreen.printCount < 6){
+                if (titleScreen.printCount === 5){
+                    titleScreen.introText.fontSize = 60;
+                    titleScreen.introText.x = 120;
+                    titleScreen.introText.y = 250;
+                    console.log(game.time.now);
+                }
 
-    out: function() {
-
-        this.text.fill = this.grd;
-
-    },
-
-    over: function() {
-
-        this.text.fill = '#ff00ff';
-
+                titleScreen.introText.text = titleScreen.introContent[titleScreen.printCount];
+                titleScreen.printCount++;
+            }
+        }
+        if (game.time.now > 20000){
+            game.state.start('main');
+        }
     }
+
+    // printLoop: function(){
+       
+    //         this.introText.text = this.introContent[this.printCount];
+    //         var alphaIn = game.add.tween(this.introText).to( { alpha: 1 }, 1000, "Linear", true, 0);
+    //         alphaIn.yoyo(true, 1000);
+    //         this.printCount++;
+        
+    // }
 
 }
 
