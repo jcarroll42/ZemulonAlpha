@@ -3,20 +3,33 @@ var mainState = {
 
         game.load.image('bullet', 'assets/bullet.png');
         game.load.image('laser', 'assets/laserblue3.png');
-        game.load.image('ship', 'assets/shmup-ship.png');
-        game.load.image('brick', 'assets/brick.png');
-        game.load.image('striker', 'assets/striker.png');
-        game.load.image('sweeper', 'assets/sweeper.png');
+        game.load.image('ship', 'assets/player.png');
+        game.load.image('enemy', 'assets/enemy2.png');
+        game.load.image('striker', 'assets/newstriker2.png');
+        game.load.image('sweeper', 'assets/sweeper3.png');
         game.load.image('laserPow', 'assets/laserPowerUp.png');
-        game.load.image('triplePow', 'assets/triplePowerUp.png');
+        game.load.image('spreadPow', 'assets/spreadPowerUp.png');
         game.load.image('spread', 'assets/spreadBullet.png');
+        game.load.image('boss', 'assets/boss4.png');
+        game.load.image('background', 'assets/starfield.png');
+        game.load.image('player2', 'assets/player2.png');
+        game.load.image('player3', 'assets/player3.png');
+        game.load.image('bossLeft', 'assets/boss4left.png');
+        game.load.image('bossRight', 'assets/boss4right.png');
 
-    },  
+
+    },
+    boss: null,
+    bossHealth: 500,
+    move: null,
+    bossOnScreen: false,  
 
     create: function() {
         score = 0;
-        this.powerUpTypes = ['laserPow', 'triplePow'];
+        this.powerUpTypes = ['laserPow', 'spreadPow'];
+        game.renderer.renderSession.roundPixels = true
 
+        this.starfield = game.add.tileSprite(0,0,800,600, 'background');
         this.firingTimer = 0;
         this.livingEnemies = [];
         this.enemyTimer = 0;
@@ -58,6 +71,14 @@ var mainState = {
         // tie weapon to player
         this.weapon.trackSprite(this.player, 26, 0);
 
+        //boss wep
+        this.bossWep = game.add.weapon(-1, 'bullet');
+        this.bossWep.bulletKillType = Phaser.Weapon.KILL_WORLD_BOUNDS;
+        this.bossWep.bulletSpeed = 200;
+        this.bossWep.fireRate = 300;
+        this.bossWep.fireAngle = 90;
+        this.bossWep.bulletAngleVariance = 40;
+
         // create input keys
         this.cursors = this.input.keyboard.createCursorKeys();
 
@@ -94,7 +115,10 @@ var mainState = {
         this.sweeperTimer = game.time.events.loop(8000, this.addSweeper, this);
 
         // loop to add powerups
-        this.powTimer = game.time.events.loop(2000, this.addPowerUp, this);
+        this.powTimer = game.time.events.loop(20000, this.addPowerUp, this);
+
+        // boss timer
+        this.bossTimer = game.time.events.add(120000, this.bossFight, this);
 
         // set the scoreboard
         this.labelScore = game.add.text(20, 20, "0", 
@@ -104,17 +128,27 @@ var mainState = {
     },
 
     update: function() {
+       
+        this.starfield.tilePosition.y += 2;
 
         this.player.body.velocity.x = 0;
         this.player.body.velocity.y = 0;
 
         //handles all movements
         if (this.cursors.left.isDown){
+            this.player.loadTexture('player2');
             this.player.body.velocity.x = -200;
+            //console.log(this.player);
         }
         else if (this.cursors.right.isDown){
+            this.player.loadTexture('player3');
             this.player.body.velocity.x = 200;
+
         }
+        else if(this.player.key != 'ship'){
+            this.player.loadTexture('ship');
+        }
+
 
         if (this.cursors.up.isDown){
             this.player.body.velocity.y = -200;
@@ -132,13 +166,25 @@ var mainState = {
             this.enemyFires();
         }
 
+        if (this.bossOnScreen === true){
+            this.bossWep.fire();
+            if (this.boss.x === 420){
+                this.boss.loadTexture('bossRight');
+            }
+            else if(this.boss.x === 30){
+                this.boss.loadTexture('bossLeft');
+            }
+        }
+
         // call the 'hit' function when a bullet hits an enemy
         game.physics.arcade.collide(this.weapon.bullets, this.enemies, this.hit, null, this);
         game.physics.arcade.collide(this.weapon.bullets, this.strikers, this.hit, null, this);
         game.physics.arcade.collide(this.weapon.bullets, this.sweepers, this.hit, null, this);
+        game.physics.arcade.collide(this.weapon.bullets, this.boss, this.bossHit, null, this);
 
         // call playerHit when an enemy bullet hits the player
         game.physics.arcade.collide(this.enemyBullets, this.player, this.playerHit, null, this);
+        game.physics.arcade.collide(this.bossWep.bullets, this.player, this.playerHit, null, this);
         game.physics.arcade.collide(this.enemies, this.player, this.playerHit, null, this);
         game.physics.arcade.collide(this.strikers, this.player, this.playerHit, null, this);
         game.physics.arcade.collide(this.sweepers, this.player, this.playerHit, null, this);
@@ -158,12 +204,27 @@ var mainState = {
     playerHit: function(object, player){
         player.kill();
         object.kill();
+        this.bossOnScreen = false;
         this.weapon.pauseAll();
         game.state.start('gameOver');
     },
 
+    bossHit: function(boss, bullets){
+        bullets.kill();
+        this.boss.health = this.boss.health - 1;
+        score += 1;
+        this.labelScore.text = score;
+        console.log(this.boss.health);
+
+        if (this.boss.health == 0){
+            this.boss.kill();
+            game.state.start('gameOver');
+        }
+    },
+
     weaponPowerUp: function(player, powerUp){
-        console.log(powerUp.key);
+        //console.log(powerUp.key);
+        console.log(game.time.now);
 
         switch (powerUp.key){
             case 'laserPow':
@@ -172,7 +233,7 @@ var mainState = {
                 this.weapon.bulletSpeed = 1000;
                 this.weapon.fireRate = 1;
                 break;
-            case 'triplePow':
+            case 'spreadPow':
                 powerUp.kill();
                 this.weapon.bulletKey = 'spread';
                 this.weapon.bulletAngleVariance = 20;
@@ -189,11 +250,13 @@ var mainState = {
     render: function() {
 
         //weapon.debug();
+        game.renderer.renderSession.roundPixels = true
 
     },
 
     resetWep: function(){
         //console.log('hi');
+        console.log(game.time.now);
         this.weapon.bulletKey = 'bullet';
         this.weapon.bulletSpeed = 400;
         this.weapon.fireRate = 100;
@@ -223,7 +286,7 @@ var mainState = {
             // randomly select an enemy
             var shooter = this.livingEnemies[random];
             // fire bullet from selected enemy
-            enemyBullet.reset(shooter.body.x + 20, shooter.body.y + 10);
+            enemyBullet.reset(shooter.body.x + 30, shooter.body.y + 60);
 
             enemyBullet.body.velocity.y = 400;
             this.firingTimer = game.time.now + 400;
@@ -233,7 +296,7 @@ var mainState = {
 
     // function that handles when an enemy gets added
     addEnemy: function(){
-        var enemy = this.addObject('brick');
+        var enemy = this.addObject('enemy');
         this.enemies.add(enemy);
         enemy.body.velocity.y = 200;
     },
@@ -289,5 +352,28 @@ var mainState = {
         gameObj.outOfBoundsKill = true;
 
         return gameObj;
+    },
+
+    bossFight: function(){
+        game.time.events.remove(this.enemyTimer);
+        game.time.events.remove(this.strikerTimer);
+        game.time.events.remove(this.sweeperTimer);
+
+        this.boss = game.add.sprite(250, -400, 'boss');
+        this.boss.health = 500;
+        this.boss.body.immovable = true;
+        this.bossWep.trackSprite(this.boss, 180, 150);
+        game.physics.enable(this.boss);
+        var bossEnter = game.add.tween(this.boss);
+        bossEnter.to({y: [20, 20], x: [250, 30]}, 10000, 'Linear');
+        bossEnter.onComplete.add(this.bossMove, this, this.boss);
+        this.bossOnScreen = true;
+        bossEnter.start();
+    },
+
+    bossMove: function(boss){
+        var move = game.add.tween(boss);
+        move.to({x: 420}, 5000, 'Linear', false, 0, Number.MAX_VALUE, true);
+        move.start();
     }
 }

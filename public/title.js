@@ -102,6 +102,7 @@ var titleScreen = {
                 }
 
                 titleScreen.introText.text = titleScreen.introContent[titleScreen.printCount];
+                console.log(titleScreen.printCount);
                 titleScreen.printCount++;
             }
         }
