@@ -112,13 +112,13 @@ var mainState = {
         this.strikerTimer = game.time.events.loop(3000, this.addStriker, this);
 
         // loop to add strikers
-        this.sweeperTimer = game.time.events.loop(8000, this.addSweeper, this);
+        this.sweeperTimer = game.time.events.loop(6000, this.addSweeper, this);
 
         // loop to add powerups
-        this.powTimer = game.time.events.loop(20000, this.addPowerUp, this);
+        this.powTimer = game.time.events.loop(15000, this.addPowerUp, this);
 
         // boss timer
-        this.bossTimer = game.time.events.add(120000, this.bossFight, this);
+        this.bossTimer = game.time.events.add(40000, this.bossFight, this);
 
         // set the scoreboard
         this.labelScore = game.add.text(20, 20, "0", 
